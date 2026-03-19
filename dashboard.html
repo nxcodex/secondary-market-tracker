@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>77X Market Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --surface3: #222222;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f0;
+    --text2: #888;
+    --text3: #555;
+    --accent: #e8ff47;
+    --accent2: rgba(232,255,71,0.12);
+    --sealed: #3b82f6;
+    --single: #a855f7;
+    --unknown: #6b7280;
+    --active: #22c55e;
+    --sold: #3b82f6;
+    --delisted: #ef4444;
+    --unconfirmed: #f59e0b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* Header */
+  .header { padding: 1.5rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: rgba(10,10,10,0.92); backdrop-filter: blur(12px); z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-mark { width: 32px; height: 32px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .logo-mark span { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; color: #0a0a0a; }
+  .logo-text { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
+  .logo-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .last-updated { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); }
+  .btn-refresh { padding: 7px 16px; background: var(--accent2); border: 1px solid rgba(232,255,71,0.3); border-radius: 6px; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .btn-refresh:hover { background: rgba(232,255,71,0.2); }
+  .btn-refresh:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Config banner */
+  .config-banner { margin: 1.5rem 2rem; padding: 1rem 1.25rem; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; display: flex; align-items: flex-start; gap: 12px; }
+  .config-banner.hidden { display: none; }
+  .config-banner p { font-size: 13px; color: #f59e0b; line-height: 1.6; }
+  .config-banner code { font-family: 'DM Mono', monospace; font-size: 12px; background: rgba(245,158,11,0.12); padding: 1px 5px; border-radius: 3px; }
+  .config-fields { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .config-fields input { flex: 1; min-width: 200px; padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; }
+  .config-fields input::placeholder { color: var(--text3); }
+  .btn-save { padding: 7px 14px; background: #f59e0b; border: none; border-radius: 6px; color: #0a0a0a; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .metric { background: var(--bg); padding: 1.25rem 2rem; }
+  .metric-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+  .metric-value { font-size: 28px; font-weight: 300; letter-spacing: -0.02em; }
+  .metric-value span { font-size: 13px; font-weight: 400; color: var(--text2); margin-left: 4px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 2rem; }
+  .tab { padding: 12px 16px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; background: var(--surface3); border-radius: 10px; font-size: 10px; font-weight: 500; color: var(--text2); margin-left: 6px; }
+
+  /* Controls */
+  .controls { padding: 1rem 2rem; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 320px; }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; pointer-events: none; }
+  .search-input { width: 100%; padding: 7px 10px 7px 32px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; }
+  .search-input:focus { outline: none; border-color: var(--border2); }
+  .search-input::placeholder { color: var(--text3); }
+  select { padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; }
+  select:focus { outline: none; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 10px 2rem; text-align: left; font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
+  th:hover { color: var(--text2); }
+  td { padding: 12px 2rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: var(--surface2); }
+  .td-title { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text2); font-size: 12px; }
+  .td-product { font-weight: 500; white-space: nowrap; }
+  .td-price { font-family: 'DM Mono', monospace; font-size: 13px; white-space: nowrap; }
+  .td-vs { font-family: 'DM Mono', monospace; font-size: 12px; }
+  .td-vs.positive { color: #22c55e; }
+  .td-vs.negative { color: #ef4444; }
+  .td-vs.neutral { color: var(--text3); }
+  .td-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); white-space: nowrap; }
+  .td-link a { color: var(--accent); font-size: 11px; font-family: 'DM Mono', monospace; text-decoration: none; opacity: 0.7; }
+  .td-link a:hover { opacity: 1; }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; letter-spacing: 0.02em; white-space: nowrap; }
+  .badge-sealed { background: rgba(59,130,246,0.12); color: #60a5fa; }
+  .badge-single { background: rgba(168,85,247,0.12); color: #c084fc; }
+  .badge-unknown { background: var(--surface3); color: var(--text3); }
+  .badge-active { background: rgba(34,197,94,0.1); color: #4ade80; }
+  .badge-sold { background: rgba(59,130,246,0.1); color: #60a5fa; }
+  .badge-delisted { background: rgba(239,68,68,0.1); color: #f87171; }
+  .badge-identified { background: rgba(232,255,71,0.08); color: var(--accent); }
+  .badge-unconfirmed { background: rgba(245,158,11,0.1); color: #fbbf24; }
+
+  /* Platform dot */
+  .platform { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); white-space: nowrap; }
+  .platform-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+
+  /* Empty state */
+  .empty { padding: 4rem 2rem; text-align: center; color: var(--text3); }
+  .empty p { font-size: 14px; margin-top: 8px; }
+
+  /* Loading */
+  .loading { padding: 4rem 2rem; text-align: center; }
+  .spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { font-size: 13px; color: var(--text3); }
+
+  /* Summary tab */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--border); }
+  .summary-card { background: var(--bg); padding: 1.25rem 1.5rem; }
+  .summary-card:hover { background: var(--surface); }
+  .sc-name { font-size: 14px; font-weight: 500; margin-bottom: 12px; }
+  .sc-msrp { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); margin-bottom: 12px; }
+  .sc-stats { display: flex; gap: 16px; }
+  .sc-stat { flex: 1; }
+  .sc-stat-val { font-size: 20px; font-weight: 300; }
+  .sc-stat-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+  .sc-bar { height: 3px; background: var(--surface3); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+  .sc-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.6s ease; }
+
+  @media (max-width: 768px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .header { padding: 1rem; }
+    .controls, td, th { padding-left: 1rem; padding-right: 1rem; }
+    .tabs { padding: 0 1rem; overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-mark"><span>77X</span></div>
+    <div>
+      <div class="logo-text">Market Tracker</div>
+      <div class="logo-sub">Secondary market intelligence</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="last-updated" id="lastUpdated">—</div>
+    <button class="btn-refresh" id="btnRefresh" onclick="loadData()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="config-banner" id="configBanner">
+  <div style="flex:1">
+    <p>Connect your Google Sheet to load live data. You need your <code>Sheet ID</code> and a <code>Google API Key</code> (with Sheets API enabled).</p>
+    <div class="config-fields">
+      <input type="text" id="inputSheetId" placeholder="Sheet ID (from URL)" />
+      <input type="text" id="inputApiKey" placeholder="Google API Key" />
+      <button class="btn-save" onclick="saveConfig()">Connect</button>
+    </div>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric">
+    <div class="metric-label">Active Listings</div>
+    <div class="metric-value" id="mActive">—</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Sold</div>
+    <div class="metric-value" id="mSold">—</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Delisted</div>
+    <div class="metric-value" id="mDelisted">—</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Unconfirmed</div>
+    <div class="metric-value" id="mUnconfirmed">—</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="active" onclick="switchTab('active')">Active <span class="tab-count" id="tc-active">0</span></div>
+  <div class="tab" data-tab="sold" onclick="switchTab('sold')">Sold <span class="tab-count" id="tc-sold">0</span></div>
+  <div class="tab" data-tab="delisted" onclick="switchTab('delisted')">Delisted <span class="tab-count" id="tc-delisted">0</span></div>
+  <div class="tab" data-tab="unconfirmed" onclick="switchTab('unconfirmed')">Unconfirmed <span class="tab-count" id="tc-unconfirmed">0</span></div>
+  <div class="tab" data-tab="summary" onclick="switchTab('summary')">Summary</div>
+</div>
+
+<div class="controls">
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input type="text" class="search-input" id="searchInput" placeholder="Search listings..." oninput="renderCurrentTab()">
+  </div>
+  <select id="filterProduct" onchange="renderCurrentTab()"><option value="">All products</option></select>
+  <select id="filterType" onchange="renderCurrentTab()">
+    <option value="">All types</option>
+    <option value="SEALED">Sealed</option>
+    <option value="SINGLE">Single</option>
+    <option value="UNKNOWN">Unknown</option>
+  </select>
+  <select id="filterPlatform" onchange="renderCurrentTab()"><option value="">All platforms</option></select>
+</div>
+
+<div id="tabContent"></div>
+
+<script>
+const SHEET_TABS = {
+  active: '💰 Active Listings',
+  sold: '✅ Sold',
+  delisted: '🚫 Delisted',
+  unconfirmed: '⚠️ Unconfirmed',
+  summary: '📊 Summary'
+};
+
+let state = { active: [], sold: [], delisted: [], unconfirmed: [], summary: [] };
+let currentTab = 'active';
+let sortCol = null, sortDir = 1;
+
+function getConfig() {
+  return {
+    sheetId: localStorage.getItem('77x_sheet_id') || '',
+    apiKey: localStorage.getItem('77x_api_key') || ''
+  };
+}
+
+function saveConfig() {
+  const id = document.getElementById('inputSheetId').value.trim();
+  const key = document.getElementById('inputApiKey').value.trim();
+  if (!id || !key) return alert('Please enter both Sheet ID and API Key.');
+  localStorage.setItem('77x_sheet_id', id);
+  localStorage.setItem('77x_api_key', key);
+  document.getElementById('configBanner').classList.add('hidden');
+  loadData();
+}
+
+function checkConfig() {
+  const { sheetId, apiKey } = getConfig();
+  if (sheetId && apiKey) {
+    document.getElementById('configBanner').classList.add('hidden');
+    return true;
+  }
+  document.getElementById('inputSheetId').value = sheetId;
+  document.getElementById('inputApiKey').value = apiKey;
+  return false;
+}
+
+async function fetchTab(tabName) {
+  const { sheetId, apiKey } = getConfig();
+  const encoded = encodeURIComponent(tabName);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encoded}?key=${apiKey}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch ${tabName}: ${res.status}`);
+  const data = await res.json();
+  const rows = data.values || [];
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+  return rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = row[i] || '');
+    return obj;
+  });
+}
+
+async function loadData() {
+  if (!checkConfig()) return;
+  const btn = document.getElementById('btnRefresh');
+  btn.disabled = true;
+  btn.textContent = '↻ Loading...';
+  showLoading();
+  try {
+    const [active, sold, delisted, unconfirmed, summary] = await Promise.all([
+      fetchTab(SHEET_TABS.active),
+      fetchTab(SHEET_TABS.sold),
+      fetchTab(SHEET_TABS.delisted),
+      fetchTab(SHEET_TABS.unconfirmed),
+      fetchTab(SHEET_TABS.summary)
+    ]);
+    state = { active, sold, delisted, unconfirmed, summary };
+    updateMetrics();
+    populateFilters();
+    renderCurrentTab();
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    document.getElementById('tabContent').innerHTML = `<div class="empty"><div style="font-size:13px;color:#ef4444;">Error loading data: ${e.message}</div><p>Check your Sheet ID and API Key are correct and the Sheets API is enabled.</p></div>`;
+  }
+  btn.disabled = false;
+  btn.textContent = '↻ Refresh';
+}
+
+function updateMetrics() {
+  document.getElementById('mActive').textContent = state.active.length;
+  document.getElementById('mSold').textContent = state.sold.length;
+  document.getElementById('mDelisted').textContent = state.delisted.length;
+  document.getElementById('mUnconfirmed').textContent = state.unconfirmed.length;
+  document.getElementById('tc-active').textContent = state.active.length;
+  document.getElementById('tc-sold').textContent = state.sold.length;
+  document.getElementById('tc-delisted').textContent = state.delisted.length;
+  document.getElementById('tc-unconfirmed').textContent = state.unconfirmed.length;
+}
+
+function populateFilters() {
+  const allRows = [...state.active, ...state.sold, ...state.delisted];
+  const products = [...new Set(allRows.map(r => r['Product']).filter(Boolean))].sort();
+  const platforms = [...new Set(allRows.map(r => r['Platform']).filter(Boolean))].sort();
+  const pSel = document.getElementById('filterProduct');
+  const plSel = document.getElementById('filterPlatform');
+  pSel.innerHTML = '<option value="">All products</option>' + products.map(p => `<option value="${p}">${p}</option>`).join('');
+  plSel.innerHTML = '<option value="">All platforms</option>' + platforms.map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+function getFiltered(rows) {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const prod = document.getElementById('filterProduct').value;
+  const type = document.getElementById('filterType').value;
+  const plat = document.getElementById('filterPlatform').value;
+  return rows.filter(r => {
+    if (q && !JSON.stringify(r).toLowerCase().includes(q)) return false;
+    if (prod && r['Product'] !== prod) return false;
+    if (type && r['Listing Type'] !== type) return false;
+    if (plat && r['Platform'] !== plat) return false;
+    return true;
+  });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  sortCol = null;
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  if (currentTab === 'summary') { renderSummary(); return; }
+  const rows = getFiltered(state[currentTab]);
+  if (currentTab === 'active') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Listing Title','Ask Price','MSRP','vs MSRP','Match Status','URL']);
+  else if (currentTab === 'sold') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Listing Title','Sale Price','MSRP','vs MSRP','Days Listed','URL']);
+  else if (currentTab === 'delisted') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Listing Title','Ask Price at Delist','MSRP','Days Listed','URL']);
+  else if (currentTab === 'unconfirmed') renderListings(rows, ['Listing Title','Platform','Ask Price','First Seen','Action Needed','URL']);
+}
+
+function renderListings(rows, cols) {
+  if (!rows.length) {
+    document.getElementById('tabContent').innerHTML = '<div class="empty"><div style="font-size:24px;">○</div><p>No listings found</p></div>';
+    return;
+  }
+  const sortedRows = sortCol ? [...rows].sort((a,b) => {
+    const av = a[sortCol] || '', bv = b[sortCol] || '';
+    const an = parseFloat(av.replace(/[$+%]/g,'')), bn = parseFloat(bv.replace(/[$+%]/g,''));
+    if (!isNaN(an) && !isNaN(bn)) return (an - bn) * sortDir;
+    return av.localeCompare(bv) * sortDir;
+  }) : rows;
+
+  const html = `<div class="table-wrap"><table>
+    <thead><tr>${cols.map(c => `<th onclick="sortBy('${c}')">${c}${sortCol===c?(sortDir===1?' ↑':' ↓'):''}</th>`).join('')}</tr></thead>
+    <tbody>${sortedRows.map(r => `<tr>${cols.map(c => `<td>${formatCell(c, r[c] || '')}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+  document.getElementById('tabContent').innerHTML = html;
+}
+
+function formatCell(col, val) {
+  if (col === 'URL') return val ? `<div class="td-link"><a href="${val}" target="_blank">↗ view</a></div>` : '—';
+  if (col === 'Listing Type') return typeBadge(val);
+  if (col === 'Match Status') return matchBadge(val);
+  if (col === 'Platform') return `<div class="platform"><div class="platform-dot"></div>${val}</div>`;
+  if (col === 'Listing Title') return `<div class="td-title" title="${val}">${val || '—'}</div>`;
+  if (col === 'Product') return `<div class="td-product">${val || '—'}</div>`;
+  if (col === 'vs MSRP') {
+    if (!val || val === '—') return `<span class="td-vs neutral">—</span>`;
+    const n = parseFloat(val);
+    const cls = n > 0 ? 'positive' : n < 0 ? 'negative' : 'neutral';
+    return `<span class="td-vs ${cls}">${val}</span>`;
+  }
+  if (['Ask Price','Sale Price','MSRP','Ask Price at Delist'].includes(col)) return `<span class="td-price">${val || '—'}</span>`;
+  if (col === 'Date Identified' || col === 'First Seen') return `<span class="td-date">${val || '—'}</span>`;
+  return val || '—';
+}
+
+function typeBadge(val) {
+  if (val === 'SEALED') return '<span class="badge badge-sealed">Sealed</span>';
+  if (val === 'SINGLE') return '<span class="badge badge-single">Single</span>';
+  return '<span class="badge badge-unknown">Unknown</span>';
+}
+
+function matchBadge(val) {
+  if (val === 'IDENTIFIED') return '<span class="badge badge-identified">Identified</span>';
+  if (val === 'UNCONFIRMED') return '<span class="badge badge-unconfirmed">Unconfirmed</span>';
+  return `<span class="badge badge-unknown">${val}</span>`;
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  renderCurrentTab();
+}
+
+function renderSummary() {
+  const rows = state.summary;
+  if (!rows.length) {
+    document.getElementById('tabContent').innerHTML = '<div class="empty"><p>No summary data available.</p></div>';
+    return;
+  }
+  const cards = rows.map(r => {
+    const total = parseInt(r['Total Seen']) || 0;
+    const active = parseInt(r['Active']) || 0;
+    const sold = parseInt(r['Sold']) || 0;
+    const delisted = parseInt(r['Delisted']) || 0;
+    const pct = total > 0 ? Math.round((sold / total) * 100) : 0;
+    return `<div class="summary-card">
+      <div class="sc-name">${r['Product'] || '—'}</div>
+      <div class="sc-msrp">MSRP ${r['MSRP'] || '—'} · Avg sale ${r['Avg Sale Price'] || '—'}</div>
+      <div class="sc-stats">
+        <div class="sc-stat"><div class="sc-stat-val" style="color:var(--active)">${active}</div><div class="sc-stat-lbl">Active</div></div>
+        <div class="sc-stat"><div class="sc-stat-val" style="color:var(--sold)">${sold}</div><div class="sc-stat-lbl">Sold</div></div>
+        <div class="sc-stat"><div class="sc-stat-val" style="color:var(--delisted)">${delisted}</div><div class="sc-stat-lbl">Delisted</div></div>
+        <div class="sc-stat"><div class="sc-stat-val">${total}</div><div class="sc-stat-lbl">Total</div></div>
+      </div>
+      <div class="sc-bar"><div class="sc-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('tabContent').innerHTML = `<div class="summary-grid">${cards}</div>`;
+}
+
+function showLoading() {
+  document.getElementById('tabContent').innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading data from Google Sheets...</p></div>';
+}
+
+// ── Password gate ─────────────────────────────────────────────────────────────
+// SHA-256 hash of the password. To change the password:
+//   1. Go to: https://emn178.github.io/online-tools/sha256.html
+//   2. Type your new password and copy the hash
+//   3. Replace the value below
+const PASSWORD_HASH = '!FanPass77!'; // FILL THIS IN — see instructions above
+
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function submitPassword() {
+  const pw = document.getElementById('gateInput').value;
+  if (!pw) return;
+  const hash = await hashPassword(pw);
+  if (hash === PASSWORD_HASH) {
+    sessionStorage.setItem('77x_auth', '1');
+    document.getElementById('gate').classList.add('hidden');
+    if (checkConfig()) loadData();
+  } else {
+    document.getElementById('gateError').textContent = 'Incorrect password.';
+    document.getElementById('gateInput').value = '';
+  }
+}
+
+function checkAuth() {
+  if (!PASSWORD_HASH) return true; // No password set — skip gate
+  return sessionStorage.getItem('77x_auth') === '1';
+}
+
+window.onload = () => {
+  if (!checkAuth()) {
+    document.getElementById('gate').classList.remove('hidden');
+    document.getElementById('gateInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') submitPassword();
+    });
+  } else {
+    document.getElementById('gate').classList.add('hidden');
+    if (checkConfig()) loadData();
+  }
+};
+</script>
+
+<!-- Password gate overlay -->
+<div class="gate hidden" id="gate">
+  <div class="gate-box">
+    <div class="gate-logo">
+      <div class="gate-logo-mark"><span>77X</span></div>
+      <div>
+        <div class="gate-logo-text">Market Tracker</div>
+        <div class="gate-logo-sub">Internal access only</div>
+      </div>
+    </div>
+    <div class="gate-label">Password</div>
+    <input type="password" class="gate-input" id="gateInput" placeholder="Enter password" autofocus>
+    <button class="gate-btn" onclick="submitPassword()">Enter</button>
+    <div class="gate-error" id="gateError"></div>
+  </div>
+</div>
+
+</body>
+</html>
