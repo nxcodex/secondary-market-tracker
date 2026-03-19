@@ -433,17 +433,13 @@ function showLoading() {
 }
 
 // ── Password gate ─────────────────────────────────────────────────────────────
-// To set your password:
-//   1. Go to: https://www.base64encode.org
-//   2. Type your password and click Encode
-//   3. Paste the result between the quotes below
-const PASSWORD_ENCODED = 'Nzd4dHJhY2tlcg=='; // e.g. 'bXlwYXNzd29yZA==' for 'mypassword'
+// Set your password directly between the quotes below
+const PASSWORD = '77xtracker'; // ← change this to your password
 
 function submitPassword() {
   const pw = document.getElementById('gateInput').value;
   if (!pw) return;
-  const encoded = btoa(pw);
-  if (encoded === PASSWORD_ENCODED) {
+  if (pw === PASSWORD) {
     sessionStorage.setItem('77x_auth', '1');
     document.getElementById('gate').classList.add('hidden');
     if (checkConfig()) loadData();
@@ -454,7 +450,7 @@ function submitPassword() {
 }
 
 function checkAuth() {
-  if (!PASSWORD_ENCODED) return true;
+  if (!PASSWORD) return true;
   return sessionStorage.getItem('77x_auth') === '1';
 }
 
