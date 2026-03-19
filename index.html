@@ -437,7 +437,7 @@ function showLoading() {
 //   1. Go to: https://emn178.github.io/online-tools/sha256.html
 //   2. Type your new password and copy the hash
 //   3. Replace the value below
-const PASSWORD_HASH = '3137cf7792a321450326c39ca9dc658b1eea6b048942e664459542a000c55ef1'; // FILL THIS IN — see instructions above
+const PASSWORD_HASH = '7782960fd6e38345942276bca37b528d8a6d224a5740f5ec5640157e02c26069'; // FILL THIS IN — see instructions above
 
 async function hashPassword(pw) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
