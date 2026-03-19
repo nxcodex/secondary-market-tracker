@@ -209,6 +209,9 @@
   <div class="tab" data-tab="sold" onclick="switchTab('sold')">Sold <span class="tab-count" id="tc-sold">0</span></div>
   <div class="tab" data-tab="delisted" onclick="switchTab('delisted')">Delisted <span class="tab-count" id="tc-delisted">0</span></div>
   <div class="tab" data-tab="unconfirmed" onclick="switchTab('unconfirmed')">Unconfirmed <span class="tab-count" id="tc-unconfirmed">0</span></div>
+  <div class="tab" data-tab="candy" onclick="switchTab('candy')">Candy Variants <span class="tab-count" id="tc-candy">0</span></div>
+  <div class="tab" data-tab="social" onclick="switchTab('social')">Social <span class="tab-count" id="tc-social">0</span></div>
+  <div class="tab" data-tab="claimed" onclick="switchTab('claimed')">Claimed Counter</div>
   <div class="tab" data-tab="summary" onclick="switchTab('summary')">Summary</div>
 </div>
 
@@ -235,10 +238,13 @@ const SHEET_TABS = {
   sold: '✅ Sold',
   delisted: '🚫 Delisted',
   unconfirmed: '⚠️ Unconfirmed',
+  candy: '🍬 Candy Variants',
+  social: '📱 Social Mentions',
+  claimed: '🍬 Candy Variants Claimed',
   summary: '📊 Summary'
 };
 
-let state = { active: [], sold: [], delisted: [], unconfirmed: [], summary: [] };
+let state = { active: [], sold: [], delisted: [], unconfirmed: [], candy: [], social: [], claimed: [], summary: [] };
 let currentTab = 'active';
 let sortCol = null, sortDir = 1;
 
@@ -278,6 +284,11 @@ async function fetchTab(tabName) {
   if (!res.ok) throw new Error(`Failed to fetch ${tabName}: ${res.status}`);
   const data = await res.json();
   const rows = data.values || [];
+  if (!rows.length) return [];
+  // Claimed tab is vertical key-value — return raw rows as objects
+  if (tabName.includes('Claimed')) {
+    return rows.map(row => ({ 'Candy Variant Counter': row[0] || '', '': row[1] || '' }));
+  }
   if (rows.length < 2) return [];
   const headers = rows[0];
   return rows.slice(1).map(row => {
@@ -294,14 +305,17 @@ async function loadData() {
   btn.textContent = '↻ Loading...';
   showLoading();
   try {
-    const [active, sold, delisted, unconfirmed, summary] = await Promise.all([
+    const [active, sold, delisted, unconfirmed, candy, social, claimed, summary] = await Promise.all([
       fetchTab(SHEET_TABS.active),
       fetchTab(SHEET_TABS.sold),
       fetchTab(SHEET_TABS.delisted),
       fetchTab(SHEET_TABS.unconfirmed),
+      fetchTab(SHEET_TABS.candy),
+      fetchTab(SHEET_TABS.social),
+      fetchTab(SHEET_TABS.claimed),
       fetchTab(SHEET_TABS.summary)
     ]);
-    state = { active, sold, delisted, unconfirmed, summary };
+    state = { active, sold, delisted, unconfirmed, candy, social, claimed, summary };
     updateMetrics();
     populateFilters();
     renderCurrentTab();
@@ -322,6 +336,8 @@ function updateMetrics() {
   document.getElementById('tc-sold').textContent = state.sold.length;
   document.getElementById('tc-delisted').textContent = state.delisted.length;
   document.getElementById('tc-unconfirmed').textContent = state.unconfirmed.length;
+  document.getElementById('tc-candy').textContent = state.candy.length;
+  document.getElementById('tc-social').textContent = state.social.length;
 }
 
 function populateFilters() {
@@ -357,11 +373,32 @@ function switchTab(tab) {
 
 function renderCurrentTab() {
   if (currentTab === 'summary') { renderSummary(); return; }
+  if (currentTab === 'claimed') { renderClaimed(); return; }
   const rows = getFiltered(state[currentTab]);
   if (currentTab === 'active') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Listing Title','Ask Price','MSRP','vs MSRP','Match Status','URL']);
   else if (currentTab === 'sold') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Listing Title','Sale Price','MSRP','vs MSRP','Days Listed','URL']);
   else if (currentTab === 'delisted') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Listing Title','Ask Price at Delist','MSRP','Days Listed','URL']);
   else if (currentTab === 'unconfirmed') renderListings(rows, ['Listing Title','Platform','Ask Price','First Seen','Action Needed','URL']);
+  else if (currentTab === 'candy') renderListings(rows, ['Date Identified','Platform','Listing Type','Listing Status','Listing Title','Ask Price','Sale Price','URL']);
+  else if (currentTab === 'social') renderListings(rows, ['Date','Platform','Username','Post Type','Post Text','URL']);
+}
+
+function renderClaimed() {
+  const rows = state.claimed;
+  if (!rows.length) {
+    document.getElementById('tabContent').innerHTML = '<div class="empty"><p>No claimed data yet.</p></div>';
+    return;
+  }
+  const cards = rows.map(r => {
+    const label = r['Candy Variant Counter'] || Object.values(r)[0] || '';
+    const value = r[''] || Object.values(r)[1] || '';
+    if (!label) return '';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 2rem;border-bottom:1px solid var(--border);">
+      <span style="font-size:14px;color:var(--text2);">${label}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--text);">${value}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('tabContent').innerHTML = `<div style="max-width:600px;margin:1.5rem auto;">${cards}</div>`;
 }
 
 function renderListings(rows, cols) {
