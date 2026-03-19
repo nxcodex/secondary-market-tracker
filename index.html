@@ -433,22 +433,17 @@ function showLoading() {
 }
 
 // ── Password gate ─────────────────────────────────────────────────────────────
-// SHA-256 hash of the password. To change the password:
-//   1. Go to: https://emn178.github.io/online-tools/sha256.html
-//   2. Type your new password and copy the hash
-//   3. Replace the value below
-const PASSWORD_HASH = '7782960fd6e38345942276bca37b528d8a6d224a5740f5ec5640157e02c26069'; // FILL THIS IN — see instructions above
+// To set your password:
+//   1. Go to: https://www.base64encode.org
+//   2. Type your password and click Encode
+//   3. Paste the result between the quotes below
+const PASSWORD_ENCODED = ''; // e.g. 'bXlwYXNzd29yZA==' for 'mypassword'
 
-async function hashPassword(pw) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-async function submitPassword() {
+function submitPassword() {
   const pw = document.getElementById('gateInput').value;
   if (!pw) return;
-  const hash = await hashPassword(pw);
-  if (hash === PASSWORD_HASH) {
+  const encoded = btoa(pw);
+  if (encoded === PASSWORD_ENCODED) {
     sessionStorage.setItem('77x_auth', '1');
     document.getElementById('gate').classList.add('hidden');
     if (checkConfig()) loadData();
@@ -459,7 +454,7 @@ async function submitPassword() {
 }
 
 function checkAuth() {
-  if (!PASSWORD_HASH) return true; // No password set — skip gate
+  if (!PASSWORD_ENCODED) return true;
   return sessionStorage.getItem('77x_auth') === '1';
 }
 
