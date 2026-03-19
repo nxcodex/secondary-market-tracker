@@ -142,6 +142,24 @@
 </head>
 <body>
 
+<!-- Gate — rendered immediately, no JS timing issues -->
+<div id="gate" style="position:fixed;inset:0;background:#0a0a0a;display:flex;align-items:center;justify-content:center;z-index:9999;">
+  <div class="gate-box">
+    <div class="gate-logo">
+      <div class="gate-logo-mark"><span>77X</span></div>
+      <div>
+        <div class="gate-logo-text">Market Tracker</div>
+        <div class="gate-logo-sub">Internal access only</div>
+      </div>
+    </div>
+    <div class="gate-label">Password</div>
+    <input type="password" class="gate-input" id="gateInput" placeholder="Enter password" autofocus>
+    <button class="gate-btn" onclick="submitPassword()">Enter</button>
+    <div class="gate-error" id="gateError"></div>
+  </div>
+</div>
+
+<div id="appContent" style="display:none;">
 <div class="header">
   <div class="logo">
     <div class="logo-mark"><span>77X</span></div>
@@ -441,7 +459,8 @@ function submitPassword() {
   if (!pw) return;
   if (pw === PASSWORD) {
     sessionStorage.setItem('77x_auth', '1');
-    document.getElementById('gate').classList.add('hidden');
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('appContent').style.display = 'block';
     if (checkConfig()) loadData();
   } else {
     document.getElementById('gateError').textContent = 'Incorrect password.';
@@ -455,34 +474,20 @@ function checkAuth() {
 }
 
 window.onload = () => {
-  if (!checkAuth()) {
-    document.getElementById('gate').classList.remove('hidden');
+  if (checkAuth()) {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('appContent').style.display = 'block';
+    if (checkConfig()) loadData();
+  } else {
+    document.getElementById('gate').style.display = 'flex';
+    document.getElementById('appContent').style.display = 'none';
     document.getElementById('gateInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') submitPassword();
     });
-  } else {
-    document.getElementById('gate').classList.add('hidden');
-    if (checkConfig()) loadData();
   }
 };
 </script>
 
-<!-- Password gate overlay -->
-<div class="gate hidden" id="gate">
-  <div class="gate-box">
-    <div class="gate-logo">
-      <div class="gate-logo-mark"><span>77X</span></div>
-      <div>
-        <div class="gate-logo-text">Market Tracker</div>
-        <div class="gate-logo-sub">Internal access only</div>
-      </div>
-    </div>
-    <div class="gate-label">Password</div>
-    <input type="password" class="gate-input" id="gateInput" placeholder="Enter password" autofocus>
-    <button class="gate-btn" onclick="submitPassword()">Enter</button>
-    <div class="gate-error" id="gateError"></div>
-  </div>
 </div>
-
 </body>
 </html>
