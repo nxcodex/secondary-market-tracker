@@ -212,6 +212,7 @@
   <div class="tab" data-tab="candy" onclick="switchTab('candy')">Candy Variants <span class="tab-count" id="tc-candy">0</span></div>
   <div class="tab" data-tab="social" onclick="switchTab('social')">Social <span class="tab-count" id="tc-social">0</span></div>
   <div class="tab" data-tab="claimed" onclick="switchTab('claimed')">Claimed Counter</div>
+  <div class="tab" data-tab="analysis" onclick="switchTab('analysis')">Analysis</div>
   <div class="tab" data-tab="summary" onclick="switchTab('summary')">Summary</div>
 </div>
 
@@ -241,10 +242,11 @@ const SHEET_TABS = {
   candy: '🍬 Candy Variants',
   social: '📱 Social Mentions',
   claimed: '🍬 Candy Variants Claimed',
+  analysis: '🔍 Analysis',
   summary: '📊 Summary'
 };
 
-let state = { active: [], sold: [], delisted: [], unconfirmed: [], candy: [], social: [], claimed: [], summary: [] };
+let state = { active: [], sold: [], delisted: [], unconfirmed: [], candy: [], social: [], claimed: [], analysis: [], summary: [] };
 let currentTab = 'active';
 let sortCol = null, sortDir = 1;
 
@@ -305,7 +307,7 @@ async function loadData() {
   btn.textContent = '↻ Loading...';
   showLoading();
   try {
-    const [active, sold, delisted, unconfirmed, candy, social, claimed, summary] = await Promise.all([
+    const [active, sold, delisted, unconfirmed, candy, social, claimed, analysis, summary] = await Promise.all([
       fetchTab(SHEET_TABS.active),
       fetchTab(SHEET_TABS.sold),
       fetchTab(SHEET_TABS.delisted),
@@ -313,9 +315,10 @@ async function loadData() {
       fetchTab(SHEET_TABS.candy),
       fetchTab(SHEET_TABS.social),
       fetchTab(SHEET_TABS.claimed),
+      fetchTab(SHEET_TABS.analysis),
       fetchTab(SHEET_TABS.summary)
     ]);
-    state = { active, sold, delisted, unconfirmed, candy, social, claimed, summary };
+    state = { active, sold, delisted, unconfirmed, candy, social, claimed, analysis, summary };
     updateMetrics();
     populateFilters();
     renderCurrentTab();
@@ -374,13 +377,73 @@ function switchTab(tab) {
 function renderCurrentTab() {
   if (currentTab === 'summary') { renderSummary(); return; }
   if (currentTab === 'claimed') { renderClaimed(); return; }
+  if (currentTab === 'analysis') { renderAnalysis(); return; }
   const rows = getFiltered(state[currentTab]);
-  if (currentTab === 'active') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Listing Title','Ask Price','MSRP','vs MSRP','Match Status','URL']);
-  else if (currentTab === 'sold') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Listing Title','Sale Price','MSRP','vs MSRP','Days Listed','URL']);
+  if (currentTab === 'active') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Card Variant','Listing Title','Seller','Ask Price','MSRP','vs MSRP','Match Status','URL']);
+  else if (currentTab === 'sold') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Card Variant','Listing Title','Seller','Sale Price','MSRP','vs MSRP','Days Listed','URL']);
   else if (currentTab === 'delisted') renderListings(rows, ['Date Identified','Product','Platform','Listing Type','Listing Title','Ask Price at Delist','MSRP','Days Listed','URL']);
   else if (currentTab === 'unconfirmed') renderListings(rows, ['Listing Title','Platform','Ask Price','First Seen','Action Needed','URL']);
   else if (currentTab === 'candy') renderListings(rows, ['Date Identified','Platform','Listing Type','Listing Status','Listing Title','Ask Price','Sale Price','URL']);
   else if (currentTab === 'social') renderListings(rows, ['Date','Platform','Username','Post Type','Post Text','URL']);
+}
+
+function renderAnalysis() {
+  const rows = state.analysis;
+  if (!rows.length) {
+    document.getElementById('tabContent').innerHTML = '<div class="empty"><p>No analysis data yet.</p></div>';
+    return;
+  }
+
+  let html = '<div style="padding: 0 2rem 2rem;">';
+  let inSection = false;
+
+  rows.forEach(r => {
+    const cols = Object.values(r);
+    const first = cols[0] || '';
+
+    // Section headers
+    if (first === 'SUPPLY ALERT' || first.startsWith('SELLER FLAGS') || first.startsWith('PRICE TRENDS')) {
+      if (inSection) html += '</div>';
+      html += `<h3 style="font-size:12px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--text3);padding:1.5rem 0 0.75rem;">${first}</h3>`;
+      inSection = false;
+      return;
+    }
+
+    // Column headers
+    if (first === 'Product' || first === 'Seller Username') {
+      html += `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:2px;">`;
+      cols.forEach(c => {
+        html += `<span style="font-size:10px;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;color:var(--text3);padding:6px 8px;">${c||''}</span>`;
+      });
+      html += '</div>';
+      inSection = true;
+      return;
+    }
+
+    // Empty rows = spacer
+    if (!first) return;
+
+    // Data rows
+    const flag = cols[4] || '';
+    const isWarning = flag.includes('⚠️');
+    const isRising = flag.includes('↑');
+    const isFalling = flag.includes('↓');
+    html += `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;border-bottom:1px solid var(--border);${isWarning ? 'background:rgba(239,68,68,0.05);' : ''}">`;
+    cols.forEach((c, i) => {
+      let color = 'var(--text)';
+      if (i === 4) {
+        if (isWarning) color = '#ef4444';
+        else if (isRising) color = '#22c55e';
+        else if (isFalling) color = '#ef4444';
+        else color = 'var(--text2)';
+      }
+      html += `<span style="font-size:13px;color:${color};padding:10px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c||'—'}</span>`;
+    });
+    html += '</div>';
+  });
+
+  html += '</div>';
+  document.getElementById('tabContent').innerHTML = html;
 }
 
 function renderClaimed() {
