@@ -307,17 +307,19 @@ async function loadData() {
   btn.textContent = '↻ Loading...';
   showLoading();
   try {
-    const [active, sold, delisted, unconfirmed, candy, social, claimed, analysis, summary] = await Promise.all([
-      fetchTab(SHEET_TABS.active),
-      fetchTab(SHEET_TABS.sold),
-      fetchTab(SHEET_TABS.delisted),
-      fetchTab(SHEET_TABS.unconfirmed),
-      fetchTab(SHEET_TABS.candy),
-      fetchTab(SHEET_TABS.social),
-      fetchTab(SHEET_TABS.claimed),
-      fetchTab(SHEET_TABS.analysis),
-      fetchTab(SHEET_TABS.summary)
-    ]);
+    // Sequential fetches to avoid Google Sheets API 429 rate limit
+    const tabKeys = ['active','sold','delisted','unconfirmed','candy','social','claimed','analysis','summary'];
+    const results = {};
+    for (const key of tabKeys) {
+      try {
+        results[key] = await fetchTab(SHEET_TABS[key]);
+      } catch(e) {
+        console.warn(`Failed to fetch ${key}:`, e.message);
+        results[key] = [];
+      }
+      await new Promise(r => setTimeout(r, 200)); // 200ms between requests
+    }
+    const { active, sold, delisted, unconfirmed, candy, social, claimed, analysis, summary } = results;
     state = { active, sold, delisted, unconfirmed, candy, social, claimed, analysis, summary };
     updateMetrics();
     populateFilters();
